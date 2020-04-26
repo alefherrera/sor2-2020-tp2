@@ -3,6 +3,7 @@
 #include "ns3/csma-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/point-to-point-module.h"
 
 using namespace ns3;
 
@@ -41,40 +42,41 @@ void
 createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers)
 {
   PointToPointHelper pointToPoint;
-  pointtoPoint.SetDeviceAttribute ("DataRate", DataRateValue (DataRate (10000000)));
-  pointtoPoint.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (10)));
 
   NodeContainer e0r0;
   e0r0.Add (emitters.Get (0));
   e0r0.Add (routers.Get (0));
-  pointtoPoint.install (e0r0);
+  pointToPoint.Install (e0r0);
 
   NodeContainer e1r0;
   e1r0.Add (emitters.Get (1));
   e1r0.Add (routers.Get (0));
-  pointtoPoint.install (e1r0);
+  pointToPoint.Install (e1r0);
 
   NodeContainer e2r0;
   e2r0.Add (emitters.Get (2));
   e2r0.Add (routers.Get (0));
-  pointtoPoint.install (e2r0);
+  pointToPoint.Install (e2r0);
 
-  pointtoPoint.install (routers);
+  pointToPoint.Install (routers);
 
   NodeContainer r1re0;
   r1re0.Add (routers.Get (1));
   r1re0.Add (receivers.Get (0));
-  pointtoPoint.install (r1re0);
+  pointToPoint.Install (r1re0);
 
   NodeContainer r1re1;
   r1re1.Add (routers.Get (1));
   r1re1.Add (receivers.Get (0));
-  pointtoPoint.install (r1re1);
+  pointToPoint.Install (r1re1);
 
   NodeContainer r1re2;
   r1re2.Add (routers.Get (2));
   r1re2.Add (receivers.Get (0));
-  pointtoPoint.install (r1re2);
+  pointToPoint.Install (r1re2);
+
+  InternetStackHelper internet;
+  internet.InstallAll ();
 }
 
 void
