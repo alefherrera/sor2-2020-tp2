@@ -18,7 +18,9 @@ void setSenders (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
 int
 main (int argc, char const *argv[])
 {
+  std::cout << "setupNodes\n";
   setupNodes ();
+  std::cout << "simulate\n";
   simulate ();
   return 0;
 }
@@ -26,7 +28,6 @@ main (int argc, char const *argv[])
 void
 setupNodes ()
 {
-  std::cout << "Configurando nodos";
   NS_LOG_INFO ("Create nodes.");
   NodeContainer senders;
   senders.Create (3);
