@@ -49,6 +49,16 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   s0r0.Add (senders.Get (0));
   s0r0.Add (routers.Get (0));
   NetDeviceContainer devs0r0 = pointToPoint.Install (s0r0);
+  PointToPointHelper pointToPoint;
+
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
+  NodeContainer e0r0;
+  e0r0.Add (emitters.Get (0));
+  e0r0.Add (routers.Get (0));
+  NetDeviceContainer deve0r0 = pointToPoint.Install (e0r0);
+>>>>>>> 181ba4726843181d4be72e2c5bb6d08cd9bf4d46
 
   NodeContainer s1r0;
   s1r0.Add (senders.Get (1));
