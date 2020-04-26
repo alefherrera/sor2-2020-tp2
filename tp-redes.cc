@@ -43,6 +43,9 @@ createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer rec
 {
   PointToPointHelper pointToPoint;
 
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
   NodeContainer e0r0;
   e0r0.Add (emitters.Get (0));
   e0r0.Add (routers.Get (0));
