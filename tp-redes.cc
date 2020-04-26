@@ -35,12 +35,6 @@ setupNodes ()
   NodeContainer receivers;
   receivers.Create (3);
 
-  createChannels (emitters, routers, receivers);
-}
-
-void
-createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers)
-{
   PointToPointHelper pointToPoint;
 
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
