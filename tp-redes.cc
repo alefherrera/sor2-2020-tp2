@@ -24,8 +24,14 @@ setupNodes ()
 {
   std::cout << "Configurando nodos";
   NS_LOG_INFO ("Create nodes.");
-  NodeContainer n;
-  n.Create (4);
+  NodeContainer emitters;
+  emitters.Create (3);
+
+  NodeContainer routers;
+  routers.Create (2);
+
+  NodeContainer receivers;
+  receivers.Create (3);
 }
 
 void
