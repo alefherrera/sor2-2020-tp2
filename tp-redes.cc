@@ -12,6 +12,8 @@ NS_LOG_COMPONENT_DEFINE ("TpRedes");
 void setupNodes ();
 void simulate ();
 void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
+void setSenders (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
+                 Ipv4InterfaceContainer ir1re1);
 
 int
 main (int argc, char const *argv[])
@@ -26,8 +28,8 @@ setupNodes ()
 {
   std::cout << "Configurando nodos";
   NS_LOG_INFO ("Create nodes.");
-  NodeContainer emitters;
-  emitters.Create (3);
+  NodeContainer senders;
+  senders.Create (3);
 
   NodeContainer routers;
   routers.Create (2);
@@ -35,28 +37,28 @@ setupNodes ()
   NodeContainer receivers;
   receivers.Create (3);
 
-  createChannels (emitters, routers, receivers);
+  createChannels (senders, routers, receivers);
 }
 
 void
-createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers)
+createChannels (NodeContainer senders, NodeContainer routers, NodeContainer receivers)
 {
   PointToPointHelper pointToPoint;
 
-  NodeContainer e0r0;
-  e0r0.Add (emitters.Get (0));
-  e0r0.Add (routers.Get (0));
-  NetDeviceContainer deve0r0 = pointToPoint.Install (e0r0);
+  NodeContainer s0r0;
+  s0r0.Add (senders.Get (0));
+  s0r0.Add (routers.Get (0));
+  NetDeviceContainer devs0r0 = pointToPoint.Install (s0r0);
 
-  NodeContainer e1r0;
-  e1r0.Add (emitters.Get (1));
-  e1r0.Add (routers.Get (0));
-  NetDeviceContainer deve1r0 = pointToPoint.Install (e1r0);
+  NodeContainer s1r0;
+  s1r0.Add (senders.Get (1));
+  s1r0.Add (routers.Get (0));
+  NetDeviceContainer devs1r0 = pointToPoint.Install (s1r0);
 
-  NodeContainer e2r0;
-  e2r0.Add (emitters.Get (2));
-  e2r0.Add (routers.Get (0));
-  NetDeviceContainer deve2r0 = pointToPoint.Install (e2r0);
+  NodeContainer s2r0;
+  s2r0.Add (senders.Get (2));
+  s2r0.Add (routers.Get (0));
+  NetDeviceContainer deve2r0 = pointToPoint.Install (s2r0);
 
   NetDeviceContainer devRouters = pointToPoint.Install (routers);
 
@@ -81,15 +83,47 @@ createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer rec
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.1.3.0", "255.255.255.0");
 
-  ipv4.Assign (deve0r0);
-  ipv4.Assign (deve1r0);
+  ipv4.Assign (devs0r0);
+  ipv4.Assign (devs1r0);
   ipv4.Assign (deve2r0);
   ipv4.Assign (devRouters);
-  ipv4.Assign (devr1re0);
-  ipv4.Assign (devr1re1);
-  ipv4.Assign (devr1re2);
+  Ipv4InterfaceContainer ir1re0 = ipv4.Assign (devr1re0);
+  Ipv4InterfaceContainer ir1re1 = ipv4.Assign (devr1re1);
+  Ipv4InterfaceContainer ir1re2 = ipv4.Assign (devr1re2);
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+
+  setSenders (senders, ir1re0, ir1re1);
+
+  //configure tracing
+  AsciiTraceHelper ascii;
+  pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
+  pointToPoint.EnablePcapAll ("tp-redes");
+}
+
+void
+setSenders (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4InterfaceContainer ir1re1)
+{
+  // Create the OnOff applications to send TCP to the server
+  OnOffHelper clientHelper ("ns3::TcpSocketFactory", Address ());
+  clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+  clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+
+  uint16_t port = 50000;
+  //normally wouldn't need a loop here but the server IP address is different
+  //on each p2p subnet
+  ApplicationContainer clientApps;
+
+  AddressValue remoteAddress1 (InetSocketAddress (ir1re0.GetAddress (1), port));
+  clientHelper.SetAttribute ("Remote", remoteAddress1);
+  clientApps.Add (clientHelper.Install (senders.Get (0)));
+
+  AddressValue remoteAddress2 (InetSocketAddress (ir1re1.GetAddress (1), port));
+  clientHelper.SetAttribute ("Remote", remoteAddress2);
+  clientApps.Add (clientHelper.Install (senders.Get (1)));
+
+  clientApps.Start (Seconds (1.0));
+  clientApps.Stop (Seconds (10.0));
 }
 
 void
