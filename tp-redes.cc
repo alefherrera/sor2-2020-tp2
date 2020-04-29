@@ -12,7 +12,7 @@ NS_LOG_COMPONENT_DEFINE ("TpRedes");
 void setupNodes ();
 void simulate ();
 void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
-void setSenders (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
+void setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
                  Ipv4InterfaceContainer ir1re1);
 
 int
@@ -96,7 +96,7 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  setSenders (senders, ir1re0, ir1re1);
+  setApplicationLayer (senders, ir1re0, ir1re1, receivers);
 
   //configure tracing
   AsciiTraceHelper ascii;
@@ -105,7 +105,7 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
 }
 
 void
-setSenders (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4InterfaceContainer ir1re1)
+setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4InterfaceContainer ir1re1, NodeContainer receivers)
 {
   // Create the OnOff applications to send TCP to the server
   OnOffHelper clientHelper ("ns3::TcpSocketFactory", Address ());
@@ -127,6 +127,17 @@ setSenders (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4InterfaceC
 
   clientApps.Start (Seconds (1.0));
   clientApps.Stop (Seconds (10.0));
+
+  uint16_t servPort = 50000;
+  // Create a packet sink to receive these packets on n2...
+  PacketSinkHelper sink ("ns3::TcpSocketFactory",
+                         InetSocketAddress (Ipv4Address::GetAny (), servPort));
+
+  ApplicationContainer apps = sink.Install (receivers.Get (0));
+  ApplicationContainer apps = sink.Install (receivers.Get (1));
+  ApplicationContainer apps = sink.Install (receivers.Get (2));
+  apps.Start (Seconds (1.0));
+  apps.Stop (Seconds (10.0));
 }
 
 void
