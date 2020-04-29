@@ -133,11 +133,12 @@ setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4I
   PacketSinkHelper sink ("ns3::TcpSocketFactory",
                          InetSocketAddress (Ipv4Address::GetAny (), servPort));
 
-  ApplicationContainer apps = sink.Install (receivers.Get (0));
-  ApplicationContainer apps = sink.Install (receivers.Get (1));
-  ApplicationContainer apps = sink.Install (receivers.Get (2));
-  apps.Start (Seconds (1.0));
-  apps.Stop (Seconds (10.0));
+  ApplicationContainer receiverApps;
+  receiverApps.Add(sink.Install (receivers.Get (0)));
+  receiverApps.Add(sink.Install (receivers.Get (1)));
+  receiverApps.Add(sink.Install (receivers.Get (2)));
+  receiverApps.Start (Seconds (0.0));
+  receiverApps.Stop (Seconds (10.0));
 }
 
 void
