@@ -13,8 +13,8 @@ NS_LOG_COMPONENT_DEFINE ("TpRedes");
 void setupNodes ();
 void simulate ();
 void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
-void setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
-                          Ipv4InterfaceContainer ir1re1, NodeContainer receivers);
+void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
+                          Ipv4Address receiver2, NodeContainer receivers);
 NetDeviceContainer createDevice (PointToPointHelper pointToPoint, NodeContainer node1,
                                  NodeContainer node2);
 
@@ -104,7 +104,8 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  setApplicationLayer (senders, ir1re0, ir1re1, receivers);
+  setApplicationLayer (senders, ir1re0.GetAddress (1), ir1re1.GetAddress (1), ir1re2.GetAddress (1),
+                       receivers);
 
   AsciiTraceHelper ascii;
   pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
@@ -121,34 +122,36 @@ createDevice (PointToPointHelper pointToPoint, NodeContainer node1, NodeContaine
 }
 
 void
-setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
-                     Ipv4InterfaceContainer ir1re1, NodeContainer receivers)
+setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
+                     NodeContainer receivers)
 {
   NS_LOG_UNCOND ("Setting up Application layer");
 
   // Create the OnOff applications to send TCP to the server
-  OnOffHelper clientHelper ("ns3::TcpSocketFactory", Address ());
-  clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
-  clientHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+  OnOffHelper onOffApplication ("ns3::TcpSocketFactory", Address ());
+  onOffApplication.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+  onOffApplication.SetAttribute ("OffTime",
+                                 StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
 
-  uint16_t port = 50000;
-  //normally wouldn't need a loop here but the server IP address is different
-  //on each p2p subnet
-  ApplicationContainer clientApps;
+  uint16_t sync_port = 50000;
 
-  AddressValue remoteAddress1 (InetSocketAddress (ir1re0.GetAddress (1), port));
-  clientHelper.SetAttribute ("Remote", remoteAddress1);
-  clientApps.Add (clientHelper.Install (senders.Get (0)));
+  ApplicationContainer senderApps;
 
-  AddressValue remoteAddress2 (InetSocketAddress (ir1re1.GetAddress (1), port));
-  clientHelper.SetAttribute ("Remote", remoteAddress2);
-  clientApps.Add (clientHelper.Install (senders.Get (1)));
+  // set up sender0 with onOff to send to receiver0
+  AddressValue remoteAddress1 (InetSocketAddress (receiver0, sync_port));
+  onOffApplication.SetAttribute ("Remote", remoteAddress1);
+  senderApps.Add (onOffApplication.Install (senders.Get (0)));
 
-  clientApps.Start (Seconds (1.0));
-  clientApps.Stop (Seconds (10.0));
+  // set up sender1 with onOff to send to receiver1
+  AddressValue remoteAddress2 (InetSocketAddress (receiver1, sync_port));
+  onOffApplication.SetAttribute ("Remote", remoteAddress2);
+  senderApps.Add (onOffApplication.Install (senders.Get (1)));
+
+  senderApps.Start (Seconds (1.0));
+  senderApps.Stop (Seconds (10.0));
 
   uint16_t servPort = 50000;
-  // Create a packet sink to receive these packets on n2...
+
   PacketSinkHelper sink ("ns3::TcpSocketFactory",
                          InetSocketAddress (Ipv4Address::GetAny (), servPort));
 
