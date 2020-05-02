@@ -60,6 +60,7 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   NS_LOG_UNCOND ("Installing point to point in s2r0");
   NetDeviceContainer deve2r0 = createDevice (pointToPoint, senders.Get (2), routers.Get (0));
 
+  NS_LOG_UNCOND ("Installing point to point between routers");
   NetDeviceContainer devRouters = pointToPoint.Install (routers);
 
   NS_LOG_UNCOND ("Installing point to point in r1re0");
