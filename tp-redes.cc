@@ -154,6 +154,7 @@ simulate ()
 {
   NS_LOG_UNCOND ("Run Simulation");
   AnimationInterface anim ("animation.xml");
+  anim.EnablePacketMetadata (true);
   Simulator::Run ();
   Simulator::Destroy ();
   NS_LOG_UNCOND ("Done");
