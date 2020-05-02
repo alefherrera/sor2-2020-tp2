@@ -13,7 +13,7 @@ void setupNodes ();
 void simulate ();
 void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
 void setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
-                 Ipv4InterfaceContainer ir1re1);
+                          Ipv4InterfaceContainer ir1re1, NodeContainer receivers);
 
 int
 main (int argc, char const *argv[])
@@ -105,7 +105,8 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
 }
 
 void
-setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4InterfaceContainer ir1re1, NodeContainer receivers)
+setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
+                     Ipv4InterfaceContainer ir1re1, NodeContainer receivers)
 {
   // Create the OnOff applications to send TCP to the server
   OnOffHelper clientHelper ("ns3::TcpSocketFactory", Address ());
@@ -134,9 +135,9 @@ setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0, Ipv4I
                          InetSocketAddress (Ipv4Address::GetAny (), servPort));
 
   ApplicationContainer receiverApps;
-  receiverApps.Add(sink.Install (receivers.Get (0)));
-  receiverApps.Add(sink.Install (receivers.Get (1)));
-  receiverApps.Add(sink.Install (receivers.Get (2)));
+  receiverApps.Add (sink.Install (receivers.Get (0)));
+  receiverApps.Add (sink.Install (receivers.Get (1)));
+  receiverApps.Add (sink.Install (receivers.Get (2)));
   receiverApps.Start (Seconds (0.0));
   receiverApps.Stop (Seconds (10.0));
 }
