@@ -18,9 +18,7 @@ void setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
 int
 main (int argc, char const *argv[])
 {
-  std::cout << "setupNodes\n";
   setupNodes ();
-  std::cout << "simulate\n";
   simulate ();
   return 0;
 }
@@ -28,13 +26,13 @@ main (int argc, char const *argv[])
 void
 setupNodes ()
 {
-  NS_LOG_INFO ("Create nodes.");
+  NS_LOG_UNCOND ("Creating senders.");
   NodeContainer senders;
   senders.Create (3);
-
+  NS_LOG_UNCOND ("Creating routers.");
   NodeContainer routers;
   routers.Create (2);
-
+  NS_LOG_UNCOND ("Creating receivers.");
   NodeContainer receivers;
   receivers.Create (3);
 
@@ -44,6 +42,7 @@ setupNodes ()
 void
 createChannels (NodeContainer senders, NodeContainer routers, NodeContainer receivers)
 {
+  NS_LOG_UNCOND ("Creating channels");
   PointToPointHelper pointToPoint;
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
@@ -51,16 +50,19 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   NodeContainer s0r0;
   s0r0.Add (senders.Get (0));
   s0r0.Add (routers.Get (0));
+  NS_LOG_UNCOND ("Installing point to point in s0r0");
   NetDeviceContainer devs0r0 = pointToPoint.Install (s0r0);
 
   NodeContainer s1r0;
   s1r0.Add (senders.Get (1));
   s1r0.Add (routers.Get (0));
+  NS_LOG_UNCOND ("Installing point to point in s1r0");
   NetDeviceContainer devs1r0 = pointToPoint.Install (s1r0);
 
   NodeContainer s2r0;
   s2r0.Add (senders.Get (2));
   s2r0.Add (routers.Get (0));
+  NS_LOG_UNCOND ("Installing point to point in s2r0");
   NetDeviceContainer deve2r0 = pointToPoint.Install (s2r0);
 
   NetDeviceContainer devRouters = pointToPoint.Install (routers);
@@ -68,21 +70,26 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   NodeContainer r1re0;
   r1re0.Add (routers.Get (1));
   r1re0.Add (receivers.Get (0));
+  NS_LOG_UNCOND ("Installing point to point in r1re0");
   NetDeviceContainer devr1re0 = pointToPoint.Install (r1re0);
 
   NodeContainer r1re1;
   r1re1.Add (routers.Get (1));
-  r1re1.Add (receivers.Get (0));
+  r1re1.Add (receivers.Get (1));
+  NS_LOG_UNCOND ("Installing point to point in r1re1");
   NetDeviceContainer devr1re1 = pointToPoint.Install (r1re1);
 
   NodeContainer r1re2;
-  r1re2.Add (routers.Get (2));
-  r1re2.Add (receivers.Get (0));
+  r1re2.Add (routers.Get (1));
+  r1re2.Add (receivers.Get (2));
+  NS_LOG_UNCOND ("Installing point to point in r1re2");
   NetDeviceContainer devr1re2 = pointToPoint.Install (r1re2);
 
+  NS_LOG_UNCOND ("Installing internet");
   InternetStackHelper internet;
   internet.InstallAll ();
 
+  NS_LOG_UNCOND ("Assigning Ips");
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.1.3.0", "255.255.255.0");
 
@@ -94,6 +101,7 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   Ipv4InterfaceContainer ir1re1 = ipv4.Assign (devr1re1);
   Ipv4InterfaceContainer ir1re2 = ipv4.Assign (devr1re2);
 
+  NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   setApplicationLayer (senders, ir1re0, ir1re1, receivers);
@@ -108,6 +116,8 @@ void
 setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
                      Ipv4InterfaceContainer ir1re1, NodeContainer receivers)
 {
+  NS_LOG_UNCOND ("Setting up Application layer.");
+
   // Create the OnOff applications to send TCP to the server
   OnOffHelper clientHelper ("ns3::TcpSocketFactory", Address ());
   clientHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
@@ -145,8 +155,8 @@ setApplicationLayer (NodeContainer senders, Ipv4InterfaceContainer ir1re0,
 void
 simulate ()
 {
-  NS_LOG_INFO ("Run Simulation.");
+  NS_LOG_UNCOND ("Run Simulation.");
   Simulator::Run ();
   Simulator::Destroy ();
-  NS_LOG_INFO ("Done.");
+  NS_LOG_UNCOND ("Done.");
 }
