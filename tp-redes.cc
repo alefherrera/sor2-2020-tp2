@@ -14,7 +14,7 @@ void setupNodes ();
 void simulate ();
 void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
 void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
-                          Ipv4Address receiver2, NodeContainer receivers);
+                          NodeContainer receivers);
 NetDeviceContainer createDevice (PointToPointHelper pointToPoint, NodeContainer node1,
                                  NodeContainer node2);
 
@@ -63,6 +63,12 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
 
+  NS_LOG_UNCOND ("Installing internet");
+  InternetStackHelper internet;
+  internet.Install (senders);
+  internet.Install (routers);
+  internet.Install (receivers);
+
   NS_LOG_UNCOND ("Installing point to point in s0r0");
   NetDeviceContainer devs0r0 = createDevice (pointToPoint, senders.Get (0), routers.Get (0));
 
@@ -84,28 +90,36 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   NS_LOG_UNCOND ("Installing point to point in r1re2");
   NetDeviceContainer devr1re2 = createDevice (pointToPoint, routers.Get (1), receivers.Get (2));
 
-  NS_LOG_UNCOND ("Installing internet");
-  InternetStackHelper internet;
-  internet.InstallAll ();
-
   NS_LOG_UNCOND ("Assigning Ips");
   Ipv4AddressHelper ipv4;
-  ipv4.SetBase ("10.1.3.0", "255.255.255.0");
-
+  ipv4.SetBase ("10.1.1.0", "255.255.255.0");
   ipv4.Assign (devs0r0);
+  ipv4.SetBase ("10.1.2.0", "255.255.255.0");
   ipv4.Assign (devs1r0);
+  ipv4.SetBase ("10.1.3.0", "255.255.255.0");
   ipv4.Assign (deve2r0);
+  ipv4.SetBase ("10.1.4.0", "255.255.255.0");
   ipv4.Assign (devRouters);
 
+  ipv4.SetBase ("10.1.5.0", "255.255.255.0");
   Ipv4InterfaceContainer ir1re0 = ipv4.Assign (devr1re0);
+  ipv4.SetBase ("10.1.6.0", "255.255.255.0");
   Ipv4InterfaceContainer ir1re1 = ipv4.Assign (devr1re1);
+  ipv4.SetBase ("10.1.7.0", "255.255.255.0");
   Ipv4InterfaceContainer ir1re2 = ipv4.Assign (devr1re2);
 
   NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  setApplicationLayer (senders, ir1re0.GetAddress (1), ir1re1.GetAddress (1), ir1re2.GetAddress (1),
-                       receivers);
+  NS_LOG_UNCOND ("Receiver 0");
+  Ipv4Address receiver0 = ir1re0.GetAddress (1);
+  NS_LOG_UNCOND (receiver0);
+
+  NS_LOG_UNCOND ("Receiver 1");
+  Ipv4Address receiver1 = ir1re1.GetAddress (1);
+  NS_LOG_UNCOND (receiver1);
+
+  setApplicationLayer (senders, receiver0, receiver1, receivers);
 
   AsciiTraceHelper ascii;
   pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
