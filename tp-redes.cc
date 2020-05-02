@@ -4,6 +4,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
+#include "ns3/netanim-module.h"
 
 using namespace ns3;
 
@@ -152,6 +153,7 @@ void
 simulate ()
 {
   NS_LOG_UNCOND ("Run Simulation");
+  AnimationInterface anim ("animation.xml");
   Simulator::Run ();
   Simulator::Destroy ();
   NS_LOG_UNCOND ("Done");
