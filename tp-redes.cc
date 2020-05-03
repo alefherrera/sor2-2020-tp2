@@ -37,23 +37,31 @@ setupNodes ()
   senders.Create (3);
 
   Names::Add ("sender 1", senders.Get (0));
+  AnimationInterface::SetConstantPosition (senders.Get (0), 1, 1);
   Names::Add ("sender 2", senders.Get (1));
+  AnimationInterface::SetConstantPosition (senders.Get (1), 1, 3);
   Names::Add ("sender 3", senders.Get (2));
+  AnimationInterface::SetConstantPosition (senders.Get (2), 1, 5);
 
   NS_LOG_UNCOND ("Creating routers");
   NodeContainer routers;
   routers.Create (2);
 
   Names::Add ("router 1", routers.Get (0));
+  AnimationInterface::SetConstantPosition (routers.Get (0), 3, 3);
   Names::Add ("router 2", routers.Get (1));
+  AnimationInterface::SetConstantPosition (routers.Get (1), 5, 3);
 
   NS_LOG_UNCOND ("Creating receivers");
   NodeContainer receivers;
   receivers.Create (3);
 
   Names::Add ("receiver 1", receivers.Get (0));
+  AnimationInterface::SetConstantPosition (receivers.Get (0), 7, 1);
   Names::Add ("receiver 2", receivers.Get (1));
+  AnimationInterface::SetConstantPosition (receivers.Get (1), 7, 3);
   Names::Add ("receiver 3", receivers.Get (2));
+  AnimationInterface::SetConstantPosition (receivers.Get (2), 7, 5);
 
   createChannels (senders, routers, receivers);
 }
