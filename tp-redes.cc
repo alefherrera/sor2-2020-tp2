@@ -94,29 +94,23 @@ setupNodes ()
   NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  NS_LOG_UNCOND ("Sender 0");
   Ipv4Address sender0 = dumbbell.GetLeftIpv4Address (0);
-  NS_LOG_UNCOND (sender0);
+  std::cout << "Sender 0: " << sender0 << "\n";
 
-  NS_LOG_UNCOND ("Sender 1");
   Ipv4Address sender1 = dumbbell.GetLeftIpv4Address (1);
-  NS_LOG_UNCOND (sender1);
+  std::cout << "Sender 1: " << sender1 << "\n";
 
-  NS_LOG_UNCOND ("Sender 2");
   Ipv4Address sender2 = dumbbell.GetLeftIpv4Address (2);
-  NS_LOG_UNCOND (sender2);
+  std::cout << "Sender 2: " << sender2 << "\n";
 
-  NS_LOG_UNCOND ("Receiver 0");
   Ipv4Address receiver0 = dumbbell.GetRightIpv4Address (0);
-  NS_LOG_UNCOND (receiver0);
+  std::cout << "Receiver 0: " << receiver0 << "\n";
 
-  NS_LOG_UNCOND ("Receiver 1");
   Ipv4Address receiver1 = dumbbell.GetRightIpv4Address (1);
-  NS_LOG_UNCOND (receiver1);
+  std::cout << "Receiver 1: " << receiver1 << "\n";
 
-  NS_LOG_UNCOND ("Receiver 2");
   Ipv4Address receiver2 = dumbbell.GetRightIpv4Address (2);
-  NS_LOG_UNCOND (receiver2);
+  std::cout << "Receiver 2: " << receiver2 << "\n";
 
   setApplicationLayer (senders, receiver0, receiver1, receiver2, receivers);
 
