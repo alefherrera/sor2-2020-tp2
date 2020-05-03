@@ -17,6 +17,7 @@ void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Addr
                           Ipv4Address receiver2, NodeContainer receivers);
 NetDeviceContainer createDevice (PointToPointHelper pointToPoint, NodeContainer node1,
                                  NodeContainer node2);
+NetDeviceContainer createLan (CsmaHelper csma, NodeContainer container);
 ApplicationContainer setUpApplication (OnOffHelper application, Ptr<Node> source,
                                        Ipv4Address destination, uint16_t port);
 OnOffHelper createOnOffApplication (std::string socketFactory);
@@ -69,10 +70,15 @@ setupNodes ()
 void
 createChannels (NodeContainer senders, NodeContainer routers, NodeContainer receivers)
 {
-  NS_LOG_UNCOND ("Creating channels");
-  PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("2ms"));
+  NS_LOG_UNCOND ("Creating PointToPointHelper");
+  PointToPointHelper p2p;
+  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
+
+  NS_LOG_UNCOND ("Creating CsmaHelper");
+  CsmaHelper csma;
+  csma.SetChannelAttribute ("DataRate", DataRateValue (5000000));
+  csma.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (2)));
 
   NS_LOG_UNCOND ("Installing internet");
   InternetStackHelper internet;
@@ -80,74 +86,70 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   internet.Install (routers);
   internet.Install (receivers);
 
-  NS_LOG_UNCOND ("Installing point to point in s0r0");
-  NetDeviceContainer devs0r0 = createDevice (pointToPoint, senders.Get (0), routers.Get (0));
+  NodeContainer lan1;
+  lan1.Add (senders);
+  lan1.Add (routers.Get (0));
 
-  NS_LOG_UNCOND ("Installing point to point in s1r0");
-  NetDeviceContainer devs1r0 = createDevice (pointToPoint, senders.Get (1), routers.Get (0));
-
-  NS_LOG_UNCOND ("Installing point to point in s2r0");
-  NetDeviceContainer deve2r0 = createDevice (pointToPoint, senders.Get (2), routers.Get (0));
+  NS_LOG_UNCOND ("Creating Lan 1");
+  NetDeviceContainer devLan1 = createLan (csma, lan1);
 
   NS_LOG_UNCOND ("Installing point to point between routers");
-  NetDeviceContainer devRouters = pointToPoint.Install (routers);
+  NetDeviceContainer devRouters = csma.Install (routers);
 
-  NS_LOG_UNCOND ("Installing point to point in r1re0");
-  NetDeviceContainer devr1re0 = createDevice (pointToPoint, routers.Get (1), receivers.Get (0));
+  NodeContainer lan2;
+  lan2.Add (receivers);
+  lan2.Add (routers.Get (1));
 
-  NS_LOG_UNCOND ("Installing point to point in r1re1");
-  NetDeviceContainer devr1re1 = createDevice (pointToPoint, routers.Get (1), receivers.Get (1));
-
-  NS_LOG_UNCOND ("Installing point to point in r1re2");
-  NetDeviceContainer devr1re2 = createDevice (pointToPoint, routers.Get (1), receivers.Get (2));
+  NS_LOG_UNCOND ("Creating Lan 2");
+  NetDeviceContainer devLan2 = createLan (csma, lan2);
 
   NS_LOG_UNCOND ("Assigning Ips");
   Ipv4AddressHelper ipv4;
+
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
-  ipv4.Assign (devs0r0);
+  ipv4.Assign (devLan1);
+
   ipv4.SetBase ("10.1.2.0", "255.255.255.0");
-  ipv4.Assign (devs1r0);
-  ipv4.SetBase ("10.1.3.0", "255.255.255.0");
-  ipv4.Assign (deve2r0);
-  ipv4.SetBase ("10.1.4.0", "255.255.255.0");
   ipv4.Assign (devRouters);
 
-  ipv4.SetBase ("10.1.5.0", "255.255.255.0");
-  Ipv4InterfaceContainer ir1re0 = ipv4.Assign (devr1re0);
-  ipv4.SetBase ("10.1.6.0", "255.255.255.0");
-  Ipv4InterfaceContainer ir1re1 = ipv4.Assign (devr1re1);
-  ipv4.SetBase ("10.1.7.0", "255.255.255.0");
-  Ipv4InterfaceContainer ir1re2 = ipv4.Assign (devr1re2);
+  ipv4.SetBase ("10.1.3.0", "255.255.255.0");
+  Ipv4InterfaceContainer ilan2 = ipv4.Assign (devLan2);
 
   NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   NS_LOG_UNCOND ("Receiver 0");
-  Ipv4Address receiver0 = ir1re0.GetAddress (1);
+  Ipv4Address receiver0 = ilan2.GetAddress (0);
   NS_LOG_UNCOND (receiver0);
 
   NS_LOG_UNCOND ("Receiver 1");
-  Ipv4Address receiver1 = ir1re1.GetAddress (1);
+  Ipv4Address receiver1 = ilan2.GetAddress (1);
   NS_LOG_UNCOND (receiver1);
 
   NS_LOG_UNCOND ("Receiver 2");
-  Ipv4Address receiver2 = ir1re2.GetAddress (1);
+  Ipv4Address receiver2 = ilan2.GetAddress (2);
   NS_LOG_UNCOND (receiver2);
 
   setApplicationLayer (senders, receiver0, receiver1, receiver2, receivers);
 
   AsciiTraceHelper ascii;
-  pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
-  pointToPoint.EnablePcapAll ("tp-redes");
+  p2p.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
+  p2p.EnablePcapAll ("tp-redes");
 }
 
 NetDeviceContainer
-createDevice (PointToPointHelper pointToPoint, NodeContainer node1, NodeContainer node2)
+createDevice (PointToPointHelper p2p, NodeContainer node1, NodeContainer node2)
 {
-  NodeContainer result;
-  result.Add (node1);
-  result.Add (node2);
-  return pointToPoint.Install (result);
+  NodeContainer container;
+  container.Add (node1);
+  container.Add (node2);
+  return p2p.Install (container);
+}
+
+NetDeviceContainer
+createLan (CsmaHelper csma, NodeContainer container)
+{
+  return csma.Install (container);
 }
 
 OnOffHelper
