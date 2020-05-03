@@ -6,13 +6,14 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/point-to-point-layout-module.h"
+#include "ns3/flow-monitor-module.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("TpRedes");
 
 void setupNodes ();
-void simulate ();
+void simulate (NodeContainer container);
 void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
                           Ipv4Address receiver2, NodeContainer receivers);
 ApplicationContainer setUpApplication (OnOffHelper application, Ptr<Node> source,
@@ -23,7 +24,6 @@ int
 main (int argc, char const *argv[])
 {
   setupNodes ();
-  simulate ();
   return 0;
 }
 
@@ -94,6 +94,18 @@ setupNodes ()
   NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
+  NS_LOG_UNCOND ("Sender 0");
+  Ipv4Address sender0 = dumbbell.GetLeftIpv4Address (0);
+  NS_LOG_UNCOND (sender0);
+
+  NS_LOG_UNCOND ("Sender 1");
+  Ipv4Address sender1 = dumbbell.GetLeftIpv4Address (1);
+  NS_LOG_UNCOND (sender1);
+
+  NS_LOG_UNCOND ("Sender 2");
+  Ipv4Address sender2 = dumbbell.GetLeftIpv4Address (2);
+  NS_LOG_UNCOND (sender2);
+
   NS_LOG_UNCOND ("Receiver 0");
   Ipv4Address receiver0 = dumbbell.GetRightIpv4Address (0);
   NS_LOG_UNCOND (receiver0);
@@ -108,7 +120,14 @@ setupNodes ()
 
   setApplicationLayer (senders, receiver0, receiver1, receiver2, receivers);
 
-  AsciiTraceHelper ascii;
+  NodeContainer container;
+  container.Add (senders);
+  container.Add (dumbbell.GetLeft ());
+  container.Add (dumbbell.GetRight ());
+  container.Add (receivers);
+  simulate (container);
+
+  /* AsciiTraceHelper ascii;
 
   p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
   p2pLeft.EnablePcapAll ("left");
@@ -117,7 +136,7 @@ setupNodes ()
   p2pRight.EnablePcapAll ("right");
 
   p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
-  p2pBottleNeck.EnablePcapAll ("bottle-neck");
+  p2pBottleNeck.EnablePcapAll ("bottle-neck"); */
 }
 
 OnOffHelper
@@ -126,7 +145,7 @@ createOnOffApplication (std::string socketFactory)
   OnOffHelper application (socketFactory, Address ());
   application.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
   application.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-  application.SetAttribute ("DataRate", DataRateValue (DataRate (10 * 8 * 1024 * 1024)));
+  application.SetAttribute ("DataRate", DataRateValue (DataRate (5 * 8 * 1024 * 1024)));
   return application;
 }
 
@@ -178,12 +197,37 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
 }
 
 void
-simulate ()
+simulate (NodeContainer container)
 {
+  FlowMonitorHelper flowmon;
+  Ptr<FlowMonitor> monitor = flowmon.Install (container);
   NS_LOG_UNCOND ("Run Simulation");
   AnimationInterface anim ("animation.xml");
   anim.EnablePacketMetadata (true);
+  Simulator::Stop (Seconds (10));
   Simulator::Run ();
+
+  NS_LOG_UNCOND ("Start Monitor");
+  monitor->CheckForLostPackets ();
+  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
+  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
+  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin ();
+       i != stats.end (); ++i)
+    {
+      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
+      std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> " << t.destinationAddress
+                << ")\n";
+      std::cout << "  Tx Packets: " << i->second.txPackets << "\n";
+      std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
+      std::cout << "  TxOffered:  " << i->second.txBytes * 8.0 / 9.0 / 1000 / 1000 << " Mbps\n";
+      std::cout << "  Rx Packets: " << i->second.rxPackets << "\n";
+      std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+      std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / 9.0 / 1000 / 1000 << " Mbps\n";
+      std::cout << "  Lost Packets: " << i->second.lostPackets << "\n";
+    }
+
+  monitor->SerializeToXmlFile ("monitor.xml", true, true);
+
   Simulator::Destroy ();
   NS_LOG_UNCOND ("Done");
 }
