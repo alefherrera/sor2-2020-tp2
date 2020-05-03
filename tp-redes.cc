@@ -14,7 +14,7 @@ void setupNodes ();
 void simulate ();
 void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
 void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
-                          NodeContainer receivers);
+                          Ipv4Address receiver2, NodeContainer receivers);
 NetDeviceContainer createDevice (PointToPointHelper pointToPoint, NodeContainer node1,
                                  NodeContainer node2);
 
@@ -119,7 +119,11 @@ createChannels (NodeContainer senders, NodeContainer routers, NodeContainer rece
   Ipv4Address receiver1 = ir1re1.GetAddress (1);
   NS_LOG_UNCOND (receiver1);
 
-  setApplicationLayer (senders, receiver0, receiver1, receivers);
+  NS_LOG_UNCOND ("Receiver 2");
+  Ipv4Address receiver2 = ir1re2.GetAddress (1);
+  NS_LOG_UNCOND (receiver2);
+
+  setApplicationLayer (senders, receiver0, receiver1, receiver2, receivers);
 
   AsciiTraceHelper ascii;
   pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
@@ -137,42 +141,56 @@ createDevice (PointToPointHelper pointToPoint, NodeContainer node1, NodeContaine
 
 void
 setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
-                     NodeContainer receivers)
+                     Ipv4Address receiver2, NodeContainer receivers)
 {
   NS_LOG_UNCOND ("Setting up Application layer");
 
   // Create the OnOff applications to send TCP to the server
-  OnOffHelper onOffApplication ("ns3::TcpSocketFactory", Address ());
-  onOffApplication.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
-  onOffApplication.SetAttribute ("OffTime",
-                                 StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+  OnOffHelper tcpOnOffApplication ("ns3::TcpSocketFactory", Address ());
+  tcpOnOffApplication.SetAttribute ("OnTime",
+                                    StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+  tcpOnOffApplication.SetAttribute ("OffTime",
+                                    StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
 
-  uint16_t sync_port = 50000;
+  OnOffHelper udpOnOffApplication ("ns3::UdpSocketFactory", Address ());
+  udpOnOffApplication.SetAttribute ("OnTime",
+                                    StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+  udpOnOffApplication.SetAttribute ("OffTime",
+                                    StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+
+  uint16_t tcpPort = 50000;
+  uint16_t udpPort = 50001;
 
   ApplicationContainer senderApps;
 
-  // set up sender0 with onOff to send to receiver0
-  AddressValue remoteAddress1 (InetSocketAddress (receiver0, sync_port));
-  onOffApplication.SetAttribute ("Remote", remoteAddress1);
-  senderApps.Add (onOffApplication.Install (senders.Get (0)));
+  // set up sender0 with onOff over TCP to send to receiver0
+  AddressValue remoteAddress0 (InetSocketAddress (receiver0, tcpPort));
+  tcpOnOffApplication.SetAttribute ("Remote", remoteAddress0);
+  senderApps.Add (tcpOnOffApplication.Install (senders.Get (0)));
 
-  // set up sender1 with onOff to send to receiver1
-  AddressValue remoteAddress2 (InetSocketAddress (receiver1, sync_port));
-  onOffApplication.SetAttribute ("Remote", remoteAddress2);
-  senderApps.Add (onOffApplication.Install (senders.Get (1)));
+  // set up sender1 with onOff over TCP to send to receiver1
+  AddressValue remoteAddress1 (InetSocketAddress (receiver1, tcpPort));
+  tcpOnOffApplication.SetAttribute ("Remote", remoteAddress1);
+  senderApps.Add (tcpOnOffApplication.Install (senders.Get (1)));
+
+  // set up sender2 with onOff over UDP to send to receiver2
+  AddressValue remoteAddress2 (InetSocketAddress (receiver2, udpPort));
+  udpOnOffApplication.SetAttribute ("Remote", remoteAddress2);
+  senderApps.Add (udpOnOffApplication.Install (senders.Get (2)));
 
   senderApps.Start (Seconds (1.0));
   senderApps.Stop (Seconds (10.0));
 
-  uint16_t servPort = 50000;
+  PacketSinkHelper tcpSink ("ns3::TcpSocketFactory",
+                            InetSocketAddress (Ipv4Address::GetAny (), tcpPort));
 
-  PacketSinkHelper sink ("ns3::TcpSocketFactory",
-                         InetSocketAddress (Ipv4Address::GetAny (), servPort));
+  PacketSinkHelper udpSink ("ns3::UdpSocketFactory",
+                            InetSocketAddress (Ipv4Address::GetAny (), udpPort));
 
   ApplicationContainer receiverApps;
-  receiverApps.Add (sink.Install (receivers.Get (0)));
-  receiverApps.Add (sink.Install (receivers.Get (1)));
-  receiverApps.Add (sink.Install (receivers.Get (2)));
+  receiverApps.Add (tcpSink.Install (receivers.Get (0)));
+  receiverApps.Add (tcpSink.Install (receivers.Get (1)));
+  receiverApps.Add (udpSink.Install (receivers.Get (2)));
   receiverApps.Start (Seconds (0.0));
   receiverApps.Stop (Seconds (10.0));
 }
