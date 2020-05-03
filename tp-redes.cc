@@ -5,6 +5,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
+#include "ns3/point-to-point-layout-module.h"
 
 using namespace ns3;
 
@@ -12,12 +13,8 @@ NS_LOG_COMPONENT_DEFINE ("TpRedes");
 
 void setupNodes ();
 void simulate ();
-void createChannels (NodeContainer emitters, NodeContainer routers, NodeContainer receivers);
 void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
                           Ipv4Address receiver2, NodeContainer receivers);
-NetDeviceContainer createDevice (PointToPointHelper pointToPoint, NodeContainer node1,
-                                 NodeContainer node2);
-NetDeviceContainer createLan (CsmaHelper csma, NodeContainer container);
 ApplicationContainer setUpApplication (OnOffHelper application, Ptr<Node> source,
                                        Ipv4Address destination, uint16_t port);
 OnOffHelper createOnOffApplication (std::string socketFactory);
@@ -33,123 +30,94 @@ main (int argc, char const *argv[])
 void
 setupNodes ()
 {
-  NS_LOG_UNCOND ("Creating senders");
+  NS_LOG_UNCOND ("Creating dumbbell");
+
+  PointToPointHelper p2pBottleNeck;
+  p2pBottleNeck.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
+  p2pBottleNeck.SetChannelAttribute ("Delay", StringValue ("1ms"));
+
+  PointToPointHelper p2pLeft;
+  p2pLeft.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+  p2pLeft.SetChannelAttribute ("Delay", StringValue ("1ms"));
+
+  PointToPointHelper p2pRight;
+  p2pRight.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+  p2pRight.SetChannelAttribute ("Delay", StringValue ("1ms"));
+
+  PointToPointDumbbellHelper dumbbell (3, p2pLeft, 3, p2pRight, p2pBottleNeck);
+
+  NS_LOG_UNCOND ("SetUp names and positions");
+  Names::Add ("sender 0", dumbbell.GetLeft (0));
+  AnimationInterface::SetConstantPosition (dumbbell.GetLeft (0), 1, 1);
+  Names::Add ("sender 1", dumbbell.GetLeft (1));
+  AnimationInterface::SetConstantPosition (dumbbell.GetLeft (1), 1, 3);
+  Names::Add ("sender 2", dumbbell.GetLeft (2));
+  AnimationInterface::SetConstantPosition (dumbbell.GetLeft (2), 1, 5);
+
+  Names::Add ("router 0", dumbbell.GetLeft ());
+  AnimationInterface::SetConstantPosition (dumbbell.GetLeft (), 3, 3);
+  Names::Add ("router 1", dumbbell.GetRight ());
+  AnimationInterface::SetConstantPosition (dumbbell.GetRight (), 5, 3);
+
+  Names::Add ("receiver 1", dumbbell.GetRight (0));
+  AnimationInterface::SetConstantPosition (dumbbell.GetRight (0), 7, 1);
+  Names::Add ("receiver 2", dumbbell.GetRight (1));
+  AnimationInterface::SetConstantPosition (dumbbell.GetRight (1), 7, 3);
+  Names::Add ("receiver 3", dumbbell.GetRight (2));
+  AnimationInterface::SetConstantPosition (dumbbell.GetRight (2), 7, 5);
+
+  NS_LOG_UNCOND ("SetUp Stack");
+
+  InternetStackHelper stack;
   NodeContainer senders;
-  senders.Create (3);
-
-  Names::Add ("sender 1", senders.Get (0));
-  AnimationInterface::SetConstantPosition (senders.Get (0), 1, 1);
-  Names::Add ("sender 2", senders.Get (1));
-  AnimationInterface::SetConstantPosition (senders.Get (1), 1, 3);
-  Names::Add ("sender 3", senders.Get (2));
-  AnimationInterface::SetConstantPosition (senders.Get (2), 1, 5);
-
-  NS_LOG_UNCOND ("Creating routers");
-  NodeContainer routers;
-  routers.Create (2);
-
-  Names::Add ("router 1", routers.Get (0));
-  AnimationInterface::SetConstantPosition (routers.Get (0), 3, 3);
-  Names::Add ("router 2", routers.Get (1));
-  AnimationInterface::SetConstantPosition (routers.Get (1), 5, 3);
-
-  NS_LOG_UNCOND ("Creating receivers");
   NodeContainer receivers;
-  receivers.Create (3);
+  for (uint32_t i = 0; i < dumbbell.LeftCount (); ++i)
+    {
+      senders.Add (dumbbell.GetLeft (i));
+      stack.Install (dumbbell.GetLeft (i));
+    }
+  for (uint32_t i = 0; i < dumbbell.RightCount (); ++i)
+    {
+      receivers.Add (dumbbell.GetRight (i));
+      stack.Install (dumbbell.GetRight (i));
+    }
 
-  Names::Add ("receiver 1", receivers.Get (0));
-  AnimationInterface::SetConstantPosition (receivers.Get (0), 7, 1);
-  Names::Add ("receiver 2", receivers.Get (1));
-  AnimationInterface::SetConstantPosition (receivers.Get (1), 7, 3);
-  Names::Add ("receiver 3", receivers.Get (2));
-  AnimationInterface::SetConstantPosition (receivers.Get (2), 7, 5);
+  stack.Install (dumbbell.GetLeft ());
+  stack.Install (dumbbell.GetRight ());
 
-  createChannels (senders, routers, receivers);
-}
+  NS_LOG_UNCOND ("Assign IPs");
 
-void
-createChannels (NodeContainer senders, NodeContainer routers, NodeContainer receivers)
-{
-  NS_LOG_UNCOND ("Creating PointToPointHelper");
-  PointToPointHelper p2p;
-  p2p.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
-  p2p.SetChannelAttribute ("Delay", StringValue ("2ms"));
-
-  NS_LOG_UNCOND ("Creating CsmaHelper");
-  CsmaHelper csma;
-  csma.SetChannelAttribute ("DataRate", DataRateValue (5000000));
-  csma.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (2)));
-
-  NS_LOG_UNCOND ("Installing internet");
-  InternetStackHelper internet;
-  internet.Install (senders);
-  internet.Install (routers);
-  internet.Install (receivers);
-
-  NodeContainer lan1;
-  lan1.Add (senders);
-  lan1.Add (routers.Get (0));
-
-  NS_LOG_UNCOND ("Creating Lan 1");
-  NetDeviceContainer devLan1 = createLan (csma, lan1);
-
-  NS_LOG_UNCOND ("Installing point to point between routers");
-  NetDeviceContainer devRouters = csma.Install (routers);
-
-  NodeContainer lan2;
-  lan2.Add (receivers);
-  lan2.Add (routers.Get (1));
-
-  NS_LOG_UNCOND ("Creating Lan 2");
-  NetDeviceContainer devLan2 = createLan (csma, lan2);
-
-  NS_LOG_UNCOND ("Assigning Ips");
-  Ipv4AddressHelper ipv4;
-
-  ipv4.SetBase ("10.1.1.0", "255.255.255.0");
-  ipv4.Assign (devLan1);
-
-  ipv4.SetBase ("10.1.2.0", "255.255.255.0");
-  ipv4.Assign (devRouters);
-
-  ipv4.SetBase ("10.1.3.0", "255.255.255.0");
-  Ipv4InterfaceContainer ilan2 = ipv4.Assign (devLan2);
+  dumbbell.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"),
+                                Ipv4AddressHelper ("10.2.1.0", "255.255.255.0"),
+                                Ipv4AddressHelper ("10.3.1.0", "255.255.255.0"));
 
   NS_LOG_UNCOND ("Populating routing tables");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   NS_LOG_UNCOND ("Receiver 0");
-  Ipv4Address receiver0 = ilan2.GetAddress (0);
+  Ipv4Address receiver0 = dumbbell.GetRightIpv4Address (0);
   NS_LOG_UNCOND (receiver0);
 
   NS_LOG_UNCOND ("Receiver 1");
-  Ipv4Address receiver1 = ilan2.GetAddress (1);
+  Ipv4Address receiver1 = dumbbell.GetRightIpv4Address (1);
   NS_LOG_UNCOND (receiver1);
 
   NS_LOG_UNCOND ("Receiver 2");
-  Ipv4Address receiver2 = ilan2.GetAddress (2);
+  Ipv4Address receiver2 = dumbbell.GetRightIpv4Address (2);
   NS_LOG_UNCOND (receiver2);
 
   setApplicationLayer (senders, receiver0, receiver1, receiver2, receivers);
 
   AsciiTraceHelper ascii;
-  p2p.EnableAsciiAll (ascii.CreateFileStream ("tp-redes.tr"));
-  p2p.EnablePcapAll ("tp-redes");
-}
 
-NetDeviceContainer
-createDevice (PointToPointHelper p2p, NodeContainer node1, NodeContainer node2)
-{
-  NodeContainer container;
-  container.Add (node1);
-  container.Add (node2);
-  return p2p.Install (container);
-}
+  p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
+  p2pLeft.EnablePcapAll ("left");
 
-NetDeviceContainer
-createLan (CsmaHelper csma, NodeContainer container)
-{
-  return csma.Install (container);
+  p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
+  p2pRight.EnablePcapAll ("right");
+
+  p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
+  p2pBottleNeck.EnablePcapAll ("bottle-neck");
 }
 
 OnOffHelper
