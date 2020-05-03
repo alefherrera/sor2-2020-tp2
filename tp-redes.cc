@@ -126,6 +126,7 @@ createOnOffApplication (std::string socketFactory)
   OnOffHelper application (socketFactory, Address ());
   application.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
   application.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+  application.SetAttribute ("DataRate", DataRateValue (DataRate (10 * 8 * 1024 * 1024)));
   return application;
 }
 
