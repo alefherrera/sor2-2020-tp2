@@ -17,6 +17,9 @@ void setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Addr
                           Ipv4Address receiver2, NodeContainer receivers);
 NetDeviceContainer createDevice (PointToPointHelper pointToPoint, NodeContainer node1,
                                  NodeContainer node2);
+ApplicationContainer setUpApplication (OnOffHelper application, Ptr<Node> source,
+                                       Ipv4Address destination, uint16_t port);
+OnOffHelper createOnOffApplication (std::string socketFactory);
 
 int
 main (int argc, char const *argv[])
@@ -139,6 +142,23 @@ createDevice (PointToPointHelper pointToPoint, NodeContainer node1, NodeContaine
   return pointToPoint.Install (result);
 }
 
+OnOffHelper
+createOnOffApplication (std::string socketFactory)
+{
+  OnOffHelper application (socketFactory, Address ());
+  application.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+  application.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+  return application;
+}
+
+ApplicationContainer
+setUpApplication (OnOffHelper application, Ptr<Node> source, Ipv4Address destination, uint16_t port)
+{
+  AddressValue address (InetSocketAddress (destination, port));
+  application.SetAttribute ("Remote", address);
+  return application.Install (source);
+}
+
 void
 setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address receiver1,
                      Ipv4Address receiver2, NodeContainer receivers)
@@ -146,17 +166,8 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
   NS_LOG_UNCOND ("Setting up Application layer");
 
   // Create the OnOff applications to send TCP to the server
-  OnOffHelper tcpOnOffApplication ("ns3::TcpSocketFactory", Address ());
-  tcpOnOffApplication.SetAttribute ("OnTime",
-                                    StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
-  tcpOnOffApplication.SetAttribute ("OffTime",
-                                    StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-
-  OnOffHelper udpOnOffApplication ("ns3::UdpSocketFactory", Address ());
-  udpOnOffApplication.SetAttribute ("OnTime",
-                                    StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
-  udpOnOffApplication.SetAttribute ("OffTime",
-                                    StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+  OnOffHelper tcpOnOffApplication = createOnOffApplication ("ns3::TcpSocketFactory");
+  OnOffHelper udpOnOffApplication = createOnOffApplication ("ns3::UdpSocketFactory");
 
   uint16_t tcpPort = 50000;
   uint16_t udpPort = 50001;
@@ -164,19 +175,11 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
   ApplicationContainer senderApps;
 
   // set up sender0 with onOff over TCP to send to receiver0
-  AddressValue remoteAddress0 (InetSocketAddress (receiver0, tcpPort));
-  tcpOnOffApplication.SetAttribute ("Remote", remoteAddress0);
-  senderApps.Add (tcpOnOffApplication.Install (senders.Get (0)));
-
+  senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (0), receiver0, tcpPort));
   // set up sender1 with onOff over TCP to send to receiver1
-  AddressValue remoteAddress1 (InetSocketAddress (receiver1, tcpPort));
-  tcpOnOffApplication.SetAttribute ("Remote", remoteAddress1);
-  senderApps.Add (tcpOnOffApplication.Install (senders.Get (1)));
-
+  senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (1), receiver1, tcpPort));
   // set up sender2 with onOff over UDP to send to receiver2
-  AddressValue remoteAddress2 (InetSocketAddress (receiver2, udpPort));
-  udpOnOffApplication.SetAttribute ("Remote", remoteAddress2);
-  senderApps.Add (udpOnOffApplication.Install (senders.Get (2)));
+  senderApps.Add (setUpApplication (udpOnOffApplication, senders.Get (2), receiver2, udpPort));
 
   senderApps.Start (Seconds (1.0));
   senderApps.Stop (Seconds (10.0));
