@@ -19,9 +19,18 @@ ApplicationContainer setUpApplication (OnOffHelper application, Ptr<Node> source
                                        Ipv4Address destination, uint16_t port);
 OnOffHelper createOnOffApplication (std::string socketFactory);
 
+bool enableUdpApplication;
+uint32_t megabytesDataRate = 1;
+
 int
-main (int argc, char const *argv[])
+main (int argc, char *argv[])
 {
+  CommandLine cmd (__FILE__);
+  cmd.AddValue ("enableUdpApplication", "Enable UDP application node.", enableUdpApplication);
+  cmd.AddValue ("megabytesDataRate", "Megabytes to be sent by sender nodes.", megabytesDataRate);
+
+  cmd.Parse (argc, argv);
+
   setupNodes ();
   simulate ();
   return 0;
@@ -126,7 +135,7 @@ createOnOffApplication (std::string socketFactory)
   OnOffHelper application (socketFactory, Address ());
   application.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
   application.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-  application.SetAttribute ("DataRate", DataRateValue (DataRate (10 * 8 * 1024 * 1024)));
+  application.SetAttribute ("DataRate", DataRateValue (DataRate (megabytesDataRate * 8 * 1024 * 1024)));
   return application;
 }
 
@@ -157,8 +166,12 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
   senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (0), receiver0, tcpPort));
   // set up sender1 with onOff over TCP to send to receiver1
   senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (1), receiver1, tcpPort));
-  // set up sender2 with onOff over UDP to send to receiver2
-  senderApps.Add (setUpApplication (udpOnOffApplication, senders.Get (2), receiver2, udpPort));
+
+  if (enableUdpApplication)
+    {
+      // set up sender2 with onOff over UDP to send to receiver2
+      senderApps.Add (setUpApplication (udpOnOffApplication, senders.Get (2), receiver2, udpPort));
+    }
 
   senderApps.Start (Seconds (1.0));
   senderApps.Stop (Seconds (10.0));
