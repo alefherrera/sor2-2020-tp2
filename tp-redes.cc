@@ -131,21 +131,22 @@ setupNodes ()
   container.Add (dumbbell.GetLeft ());
   container.Add (dumbbell.GetRight ());
   container.Add (receivers);
-  simulate (container);
 
   AsciiTraceHelper ascii;
 
-  /*  p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
-  p2pLeft.EnablePcapAll ("left");
+  // p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
+  // p2pLeft.EnablePcapAll ("left");
 
-  p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
-  p2pRight.EnablePcapAll ("right"); */
+  // p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
+  // p2pRight.EnablePcapAll ("right");
 
   // p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
 
   p2pLeft.EnablePcap ("left-sender", senders, false);
   // p2pBottleNeck.EnablePcap ("botte-neck-sender", senders, false);
   // p2pBottleNeck.EnablePcapAll ("bottle-neck");
+
+  simulate (container);
 }
 
 OnOffHelper
