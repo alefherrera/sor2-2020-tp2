@@ -26,11 +26,14 @@ uint32_t megabytesDataRate = 1;
 int
 main (int argc, char *argv[])
 {
-  CommandLine cmd (__FILE__);
+  CommandLine cmd;
   cmd.AddValue ("enableUdpApplication", "Enable UDP application node.", enableUdpApplication);
   cmd.AddValue ("megabytesDataRate", "Megabytes to be sent by sender nodes.", megabytesDataRate);
 
   cmd.Parse (argc, argv);
+
+  std::cout << "Udp enabled: " << enableUdpApplication << "\n";
+  std::cout << "Data rate: " << megabytesDataRate << "Mbps \n";
 
   setupNodes ();
   return 0;
@@ -46,11 +49,11 @@ setupNodes ()
   p2pBottleNeck.SetChannelAttribute ("Delay", StringValue ("1ms"));
 
   PointToPointHelper p2pLeft;
-  p2pLeft.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+  p2pLeft.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   p2pLeft.SetChannelAttribute ("Delay", StringValue ("1ms"));
 
   PointToPointHelper p2pRight;
-  p2pRight.SetDeviceAttribute ("DataRate", StringValue ("10Mbps"));
+  p2pRight.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   p2pRight.SetChannelAttribute ("Delay", StringValue ("1ms"));
 
   PointToPointDumbbellHelper dumbbell (3, p2pLeft, 3, p2pRight, p2pBottleNeck);
@@ -130,16 +133,19 @@ setupNodes ()
   container.Add (receivers);
   simulate (container);
 
-  /* AsciiTraceHelper ascii;
+  AsciiTraceHelper ascii;
 
-  p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
+  /*  p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
   p2pLeft.EnablePcapAll ("left");
 
   p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
-  p2pRight.EnablePcapAll ("right");
+  p2pRight.EnablePcapAll ("right"); */
 
-  p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
-  p2pBottleNeck.EnablePcapAll ("bottle-neck"); */
+  // p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
+
+  p2pLeft.EnablePcap ("left-sender", senders, false);
+  // p2pBottleNeck.EnablePcap ("botte-neck-sender", senders, false);
+  // p2pBottleNeck.EnablePcapAll ("bottle-neck");
 }
 
 OnOffHelper
@@ -148,7 +154,8 @@ createOnOffApplication (std::string socketFactory)
   OnOffHelper application (socketFactory, Address ());
   application.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
   application.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-  application.SetAttribute ("DataRate", DataRateValue (DataRate (megabytesDataRate * 8 * 1024 * 1024)));
+  application.SetAttribute ("DataRate",
+                            DataRateValue (DataRate (megabytesDataRate * 8 * 1024 * 1024)));
   return application;
 }
 
@@ -211,7 +218,7 @@ simulate (NodeContainer container)
   NS_LOG_UNCOND ("Run Simulation");
   AnimationInterface anim ("animation.xml");
   anim.EnablePacketMetadata (true);
-  Simulator::Stop (Seconds (10));
+  Simulator::Stop (Seconds (12));
   Simulator::Run ();
 
   NS_LOG_UNCOND ("Start Monitor");
