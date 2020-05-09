@@ -21,17 +21,44 @@ ApplicationContainer setUpApplication (OnOffHelper application, Ptr<Node> source
 OnOffHelper createOnOffApplication (std::string socketFactory);
 
 bool enableUdpApplication;
+bool enableTcpApplication;
 uint32_t megabytesDataRate = 1;
+std::string tcpVariant = "TcpNewReno";
 
 int
 main (int argc, char *argv[])
 {
   CommandLine cmd;
   cmd.AddValue ("enableUdpApplication", "Enable UDP application node.", enableUdpApplication);
+  cmd.AddValue ("enableTcpApplication", "Enable third TCP application node.", enableTcpApplication);
   cmd.AddValue ("megabytesDataRate", "Megabytes to be sent by sender nodes.", megabytesDataRate);
-
+  cmd.AddValue ("tcpVariant",
+                "Transport protocol to use: TcpNewReno, "
+                "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
+                "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat ",
+                tcpVariant);
   cmd.Parse (argc, argv);
 
+  tcpVariant = std::string ("ns3::") + tcpVariant;
+  // Select TCP variant
+  if (tcpVariant.compare ("ns3::TcpWestwoodPlus") == 0)
+    {
+      // TcpWestwoodPlus is not an actual TypeId name; we need TcpWestwood here
+      Config::SetDefault ("ns3::TcpL4Protocol::SocketType",
+                          TypeIdValue (TcpWestwood::GetTypeId ()));
+      // the default protocol type in ns3::TcpWestwood is WESTWOOD
+      Config::SetDefault ("ns3::TcpWestwood::ProtocolType", EnumValue (TcpWestwood::WESTWOODPLUS));
+    }
+  else
+    {
+      TypeId tcpTid;
+      NS_ABORT_MSG_UNLESS (TypeId::LookupByNameFailSafe (tcpVariant, &tcpTid),
+                           "TypeId " << tcpVariant << " not found");
+      Config::SetDefault ("ns3::TcpL4Protocol::SocketType",
+                          TypeIdValue (TypeId::LookupByName (tcpVariant)));
+    }
+
+  std::cout << "Tcp Variant: " << tcpVariant << "\n";
   std::cout << "Udp enabled: " << enableUdpApplication << "\n";
   std::cout << "Data rate: " << megabytesDataRate << "Mbps \n";
 
@@ -134,15 +161,15 @@ setupNodes ()
 
   AsciiTraceHelper ascii;
 
-  // p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
+  p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
   // p2pLeft.EnablePcapAll ("left");
 
-  // p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
+  p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
   // p2pRight.EnablePcapAll ("right");
 
-  // p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
+  p2pBottleNeck.EnableAsciiAll (ascii.CreateFileStream ("bottle-neck.tr"));
 
-  p2pLeft.EnablePcap ("left-sender", senders, false);
+  // p2pLeft.EnablePcap ("left-sender", senders, false);
   // p2pBottleNeck.EnablePcap ("botte-neck-sender", senders, false);
   // p2pBottleNeck.EnablePcapAll ("bottle-neck");
 
@@ -188,10 +215,16 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
   // set up sender1 with onOff over TCP to send to receiver1
   senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (1), receiver1, tcpPort));
 
-  if (enableUdpApplication)
+  if (enableUdpApplication && !enableTcpApplication)
     {
       // set up sender2 with onOff over UDP to send to receiver2
       senderApps.Add (setUpApplication (udpOnOffApplication, senders.Get (2), receiver2, udpPort));
+    }
+
+  if (enableTcpApplication)
+    {
+      // set up sender2 with onOff over TCP to send to receiver2
+      senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (2), receiver2, tcpPort));
     }
 
   senderApps.Start (Seconds (1.0));
