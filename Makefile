@@ -7,4 +7,4 @@ udp:
 tcp:
 	../../waf --run "tp-redes --enableTcpApplication=true" --cwd=examples/sor2-2020-tp2/output/
 hybla:
-	../../waf --run "tp-redes --tcpVariant=TcpHybla" --cwd=examples/sor2-2020-tp2/output/
+	../../waf --run "tp-redes --enableTcpApplication=true --tcpVariant=TcpHybla" --cwd=examples/sor2-2020-tp2/output/
