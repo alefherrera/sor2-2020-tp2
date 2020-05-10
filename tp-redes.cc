@@ -210,26 +210,6 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
 
   ApplicationContainer senderApps;
 
-  // set up sender0 with onOff over TCP to send to receiver0
-  senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (0), receiver0, tcpPort));
-  // set up sender1 with onOff over TCP to send to receiver1
-  senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (1), receiver1, tcpPort));
-
-  if (enableUdpApplication && !enableTcpApplication)
-    {
-      // set up sender2 with onOff over UDP to send to receiver2
-      senderApps.Add (setUpApplication (udpOnOffApplication, senders.Get (2), receiver2, udpPort));
-    }
-
-  if (enableTcpApplication)
-    {
-      // set up sender2 with onOff over TCP to send to receiver2
-      senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (2), receiver2, tcpPort));
-    }
-
-  senderApps.Start (Seconds (1.0));
-  senderApps.Stop (Seconds (10.0));
-
   PacketSinkHelper tcpSink ("ns3::TcpSocketFactory",
                             InetSocketAddress (Ipv4Address::GetAny (), tcpPort));
 
@@ -237,9 +217,30 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
                             InetSocketAddress (Ipv4Address::GetAny (), udpPort));
 
   ApplicationContainer receiverApps;
+
+  // set up sender0 with onOff over TCP to send to receiver0
+  senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (0), receiver0, tcpPort));
   receiverApps.Add (tcpSink.Install (receivers.Get (0)));
+  // set up sender1 with onOff over TCP to send to receiver1
+  senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (1), receiver1, tcpPort));
   receiverApps.Add (tcpSink.Install (receivers.Get (1)));
-  receiverApps.Add (udpSink.Install (receivers.Get (2)));
+
+  if (enableUdpApplication && !enableTcpApplication)
+    {
+      // set up sender2 with onOff over UDP to send to receiver2
+      senderApps.Add (setUpApplication (udpOnOffApplication, senders.Get (2), receiver2, udpPort));
+      receiverApps.Add (udpSink.Install (receivers.Get (2)));
+    }
+
+  if (enableTcpApplication)
+    {
+      // set up sender2 with onOff over TCP to send to receiver2
+      senderApps.Add (setUpApplication (tcpOnOffApplication, senders.Get (2), receiver2, tcpPort));
+      receiverApps.Add (tcpSink.Install (receivers.Get (2)));
+    }
+
+  senderApps.Start (Seconds (1.0));
+  senderApps.Stop (Seconds (10.0));
   receiverApps.Start (Seconds (0.0));
   receiverApps.Stop (Seconds (10.0));
 }
