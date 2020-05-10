@@ -22,8 +22,9 @@ OnOffHelper createOnOffApplication (std::string socketFactory);
 
 bool enableUdpApplication;
 bool enableTcpApplication;
-uint32_t megabytesDataRate = 1;
+uint32_t megabytesDataRate = 200;
 std::string tcpVariant = "TcpNewReno";
+uint32_t simulationDuration = 20;
 
 int
 main (int argc, char *argv[])
@@ -162,7 +163,7 @@ setupNodes ()
   AsciiTraceHelper ascii;
 
   p2pLeft.EnableAsciiAll (ascii.CreateFileStream ("left.tr"));
-  // p2pLeft.EnablePcapAll ("left");
+  p2pLeft.EnablePcapAll ("left");
 
   p2pRight.EnableAsciiAll (ascii.CreateFileStream ("right.tr"));
   // p2pRight.EnablePcapAll ("right");
@@ -228,7 +229,7 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
     }
 
   senderApps.Start (Seconds (1.0));
-  senderApps.Stop (Seconds (10.0));
+  senderApps.Stop (Seconds (simulationDuration));
 
   PacketSinkHelper tcpSink ("ns3::TcpSocketFactory",
                             InetSocketAddress (Ipv4Address::GetAny (), tcpPort));
@@ -241,7 +242,7 @@ setApplicationLayer (NodeContainer senders, Ipv4Address receiver0, Ipv4Address r
   receiverApps.Add (tcpSink.Install (receivers.Get (1)));
   receiverApps.Add (udpSink.Install (receivers.Get (2)));
   receiverApps.Start (Seconds (0.0));
-  receiverApps.Stop (Seconds (10.0));
+  receiverApps.Stop (Seconds (simulationDuration));
 }
 
 void
@@ -252,7 +253,7 @@ simulate (NodeContainer container)
   NS_LOG_UNCOND ("Run Simulation");
   AnimationInterface anim ("animation.xml");
   anim.EnablePacketMetadata (true);
-  Simulator::Stop (Seconds (12));
+  Simulator::Stop (Seconds (simulationDuration));
   Simulator::Run ();
 
   NS_LOG_UNCOND ("Start Monitor");
